@@ -6,6 +6,8 @@ import 'package:rota_plus/data/local/database.dart';
 import 'package:rota_plus/data/remote/supabase_sync_client.dart';
 import 'package:rota_plus/features/expenses/data/repositories/expense_repository.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
+import 'package:rota_plus/features/financial/data/repositories/financial_repository.dart';
+import 'package:rota_plus/features/financial/domain/entities/period_summary.dart';
 import 'package:rota_plus/features/goals/domain/entities/work_goals.dart';
 import 'package:rota_plus/features/history/data/repositories/ride_history_repository.dart';
 import 'package:rota_plus/features/history/domain/entities/daily_totals.dart';
@@ -164,6 +166,20 @@ final pendingSyncCountProvider = StreamProvider<int>((ref) {
 /// Resumo de hoje, direto do banco local.
 final todayTotalsProvider = StreamProvider<DailyTotals>((ref) {
   return ref.watch(rideHistoryRepositoryProvider).watchToday();
+});
+
+/// Apuração financeira a partir do banco local.
+final financialRepositoryProvider = Provider<FinancialRepository>((ref) {
+  return FinancialRepository(dao: ref.watch(appDatabaseProvider).reportDao);
+});
+
+/// Período selecionado no fechamento de caixa.
+final cashPeriodProvider = StateProvider<CashPeriod>((ref) => CashPeriod.day);
+
+/// Relatório do período selecionado.
+final cashReportProvider = StreamProvider<CashReport>((ref) {
+  final (from, to) = ref.watch(cashPeriodProvider).rangeFrom(DateTime.now());
+  return ref.watch(financialRepositoryProvider).watchReport(from: from, to: to);
 });
 
 /// Despesas de hoje, direto do banco local.
