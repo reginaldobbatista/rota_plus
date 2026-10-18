@@ -2,7 +2,9 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rota_plus/core/config/env.dart';
+import 'package:rota_plus/core/services/accessibility_bridge.dart';
 import 'package:rota_plus/core/services/navigation_launcher.dart';
+import 'package:rota_plus/core/services/overlay_service.dart';
 import 'package:rota_plus/core/services/tts_service.dart';
 import 'package:rota_plus/core/sync/sync_engine.dart';
 import 'package:rota_plus/core/sync/sync_scheduler.dart';
@@ -185,6 +187,18 @@ final appSettingsProvider = StreamProvider<AppSettings>((ref) {
 /// Tema escolhido pelo motorista.
 final themeModeProvider = Provider<ThemeMode>((ref) {
   return ref.watch(appSettingsProvider).value?.themeMode ?? ThemeMode.system;
+});
+
+/// Ponte com o serviço de captura nativo.
+final accessibilityBridgeProvider = Provider<AccessibilityBridge>(
+  (ref) => AccessibilityBridge(),
+);
+
+/// Controle do cartão flutuante.
+final overlayServiceProvider = Provider<OverlayService>((ref) {
+  final service = OverlayService();
+  ref.onDispose(() => service.hide().ignore());
+  return service;
 });
 
 /// Serviço de voz.

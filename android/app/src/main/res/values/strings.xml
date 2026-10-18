@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rota Plus</string>
+
+    <!--
+      Texto mostrado pelo Android na tela de Acessibilidade, no momento em que
+      o usuário decide conceder ou não. Precisa dizer exatamente o que o
+      serviço faz e o que não faz.
+    -->
+    <string name="accessibility_description">O Rota Plus lê o valor, a distância e o tempo das ofertas de corrida exibidas pelo Uber, 99 e inDrive, para calcular na hora se a corrida compensa. Nenhum outro aplicativo é lido, o texto da tela não é guardado e nada é enviado para fora do aparelho.</string>
+</resources>

@@ -230,6 +230,23 @@ Formulário longo não cabe na viewport padrão de 600×800 e widget fora dela n
 falharia por não achar o campo, não por defeito real. Defina `tester.view.physicalSize` e restaure com
 `addTearDown(tester.view.reset)`.
 
+### Overlay e serviço de captura (Android nativo)
+
+- **O overlay roda num `FlutterEngine` separado.** Não enxerga providers, banco
+  nem sessão. Recebe um retrato pronto em JSON e **não recalcula nada** — recalcular
+  do outro lado abriria espaço para o cartão discordar do histórico.
+- **`overlayMain` fica em `main.dart`**, com `@pragma('vm:entry-point')`. O plugin
+  procura pelo nome a partir da biblioteca principal, e sem a anotação o tree shaking
+  remove a função no build de release: o overlay abre em branco, e só em release.
+- **A lista de pacotes monitorados é fechada**, em `accessibility_config.xml` **e** em
+  `RideParsers`. As duas precisam coincidir. É o item central da revisão do Google Play.
+- **Nada capturado é persistido ou logado.** Nem em debug.
+- O parsing das ofertas vive em **Dart**, não em Kotlin: é a parte que mais quebra quando
+  os apps mudam de layout, e aqui fica coberta por teste. O nativo manda só as linhas de
+  texto visíveis — a árvore de nós nunca cruza o canal.
+- Toda captura passa por debounce de 250 ms e descarte por assinatura. Sem isso o app
+  reavalia a mesma oferta dezenas de vezes por segundo durante a animação do cartão.
+
 ### Alterou o banco?
 
 1. Crie um arquivo novo em `supabase/migrations/` — **nunca edite uma migration já aplicada**.

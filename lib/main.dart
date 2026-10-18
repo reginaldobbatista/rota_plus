@@ -3,7 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rota_plus/app/app.dart';
 import 'package:rota_plus/bootstrap.dart';
 import 'package:rota_plus/core/config/env.dart';
+import 'package:rota_plus/overlay/overlay_main.dart' as overlay;
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+/// Ponto de entrada do engine do overlay.
+///
+/// Precisa viver aqui, no mesmo arquivo de `main`: o plugin procura a função
+/// pelo nome a partir da biblioteca principal. A anotação `vm:entry-point`
+/// impede o tree shaking de removê-la no build de release — sem ela o overlay
+/// abre em branco, e só em release.
+@pragma('vm:entry-point')
+void overlayMain() => overlay.overlayMain();
 
 Future<void> main() async {
   final overrides = await bootstrap();

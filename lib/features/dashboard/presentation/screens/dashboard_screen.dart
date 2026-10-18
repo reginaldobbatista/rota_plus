@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rota_plus/app/providers.dart';
 import 'package:rota_plus/app/router.dart';
+import 'package:rota_plus/app/theme/app_theme.dart';
 import 'package:rota_plus/app/theme/breakpoints.dart';
 import 'package:rota_plus/core/formatters/formatters.dart';
 import 'package:rota_plus/features/history/domain/entities/daily_totals.dart';
+import 'package:rota_plus/features/semaphore/presentation/controllers/monitoring_controller.dart';
 import 'package:rota_plus/shared/widgets/metric_card.dart';
 
 /// Tela principal.
@@ -40,6 +42,8 @@ class DashboardScreen extends ConsumerWidget {
                     const _SetupCard(),
                     const SizedBox(height: 16),
                   ],
+                  const _MonitoringCard(),
+                  const SizedBox(height: 16),
                   const _WorkSessionCard(),
                   const SizedBox(height: 16),
                   const _TodayCard(),
@@ -152,6 +156,167 @@ class DashboardScreen extends ConsumerWidget {
 
   Decimal _minimumFare(Decimal costPerKm) =>
       (costPerKm * Decimal.parse('1.30')).round(scale: 2);
+}
+
+/// Liga e desliga o semáforo sobre os apps de transporte.
+///
+/// É o botão que entrega o produto. Quando falta permissão, leva direto para
+/// a tela que resolve — ligar um serviço que não capturaria nada seria pior
+/// do que recusar.
+class _MonitoringCard extends ConsumerStatefulWidget {
+  const _MonitoringCard();
+
+  @override
+  ConsumerState<_MonitoringCard> createState() => _MonitoringCardState();
+}
+
+class _MonitoringCardState extends ConsumerState<_MonitoringCard>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // O motorista concede a permissão nos Ajustes e volta. Sem reconsultar
+    // aqui, o cartão continuaria dizendo que falta permissão.
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  void _refresh() {
+    ref.read(monitoringControllerProvider.notifier).refreshPermissions();
+  }
+
+  Future<void> _toggle({required bool running}) async {
+    final controller = ref.read(monitoringControllerProvider.notifier);
+
+    if (running) {
+      await controller.stop();
+      return;
+    }
+
+    final started = await controller.start();
+    if (started || !mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Falta uma permissão'),
+        content: const Text(
+          'Para mostrar o semáforo sobre o Uber, 99 e inDrive, o app precisa '
+          'da permissão de acessibilidade e de sobreposição.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Agora não'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.push(AppRoute.permissions.path);
+            },
+            child: const Text('Configurar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final state = ref.watch(monitoringControllerProvider);
+    final configured = ref.watch(isConfiguredProvider);
+
+    return Card(
+      color: state.isRunning
+          ? theme.semaphore.go.withValues(alpha: 0.12)
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  state.isRunning
+                      ? Icons.traffic_rounded
+                      : Icons.traffic_outlined,
+                  size: 32,
+                  color: state.isRunning
+                      ? theme.semaphore.goText
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.isRunning
+                            ? 'Semáforo ligado'
+                            : 'Semáforo desligado',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        state.isRunning
+                            ? 'Avaliando as ofertas que aparecerem'
+                            : 'Ligue antes de começar a rodar',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: configured
+                  ? () => _toggle(running: state.isRunning)
+                  : null,
+              icon: Icon(
+                state.isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              ),
+              label: Text(
+                state.isRunning ? 'Parar monitoramento' : 'Iniciar trabalho',
+              ),
+            ),
+            if (state.missingPermissions && !state.isRunning) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Falta conceder acessibilidade ou sobreposição.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Controle de expediente.

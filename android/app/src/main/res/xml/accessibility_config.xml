@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Configuração do serviço de captura.
+
+  O atributo `android:packageNames` é o item mais importante deste arquivo e
+  provavelmente de toda a revisão do Google Play: é ele que separa "lê três
+  apps de transporte" de "lê tudo o que o usuário faz no telefone".
+
+  Ao adicionar uma plataforma nova, atualize também `RideParsers` no Dart —
+  as duas listas precisam coincidir.
+-->
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_description"
+    android:notificationTimeout="250"
+    android:packageNames="com.ubercab.driver,com.nineninetaxi.driver,com.taxis99,com.indrive.passenger,sinet.startup.inDriver"
+    android:settingsActivity="io.r2b.rota_plus.MainActivity" />
