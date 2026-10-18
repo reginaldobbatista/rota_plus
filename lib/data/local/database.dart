@@ -12,6 +12,7 @@ import 'package:rota_plus/data/local/daos/outbox_dao.dart';
 import 'package:rota_plus/data/local/daos/report_dao.dart';
 import 'package:rota_plus/data/local/daos/ride_dao.dart';
 import 'package:rota_plus/data/local/daos/session_dao.dart';
+import 'package:rota_plus/data/local/daos/settings_dao.dart';
 import 'package:rota_plus/data/local/tables.dart';
 import 'package:rota_plus/data/local/tables_config.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
@@ -37,8 +38,17 @@ part 'database.g.dart';
     LocalMaintenanceItems,
     LocalFixedCosts,
     LocalWorkProfiles,
+    LocalSettings,
   ],
-  daos: [RideDao, ExpenseDao, OutboxDao, ConfigDao, ReportDao, SessionDao],
+  daos: [
+    RideDao,
+    ExpenseDao,
+    OutboxDao,
+    ConfigDao,
+    ReportDao,
+    SessionDao,
+    SettingsDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   /// Abre o banco no armazenamento do app.
@@ -48,7 +58,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Guarda `DateTime` como texto ISO-8601 em UTC.
   ///
@@ -70,6 +80,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(localMaintenanceItems);
         await m.createTable(localFixedCosts);
         await m.createTable(localWorkProfiles);
+      }
+      // v3: preferências de aparelho, como o onboarding já visto.
+      if (from < 3) {
+        await m.createTable(localSettings);
       }
     },
     beforeOpen: (details) async {

@@ -5,6 +5,7 @@ import 'package:rota_plus/app/providers.dart';
 import 'package:rota_plus/app/router.dart';
 import 'package:rota_plus/app/theme/breakpoints.dart';
 import 'package:rota_plus/core/config/env.dart';
+import 'package:rota_plus/core/services/navigation_launcher.dart';
 
 /// T13 — Ajustes.
 ///
@@ -75,6 +76,11 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => context.push(AppRoute.expenses.path),
                 ),
 
+                const _SectionTitle('Preferências'),
+                const _ThemeTile(),
+                const _VoiceTile(),
+                const _NavigationAppTile(),
+
                 const _SectionTitle('Sistema'),
                 _Tile(
                   icon: Icons.verified_user_rounded,
@@ -94,6 +100,152 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Escolha de tema.
+class _ThemeTile extends ConsumerWidget {
+  const _ThemeTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final repo = ref.read(appSettingsRepositoryProvider);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.brightness_6_rounded),
+                  const SizedBox(width: 16),
+                  Text('Tema', style: Theme.of(context).textTheme.bodyLarge),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(value: ThemeMode.light, label: Text('Claro')),
+                  ButtonSegment(value: ThemeMode.dark, label: Text('Escuro')),
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    label: Text('Sistema'),
+                  ),
+                ],
+                selected: {mode},
+                onSelectionChanged: (s) => repo.setThemeMode(s.first).ignore(),
+                showSelectedIcon: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Liga/desliga o aviso por voz e ajusta a velocidade.
+class _VoiceTile extends ConsumerWidget {
+  const _VoiceTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(appSettingsProvider).value;
+    final repo = ref.read(appSettingsRepositoryProvider);
+    final enabled = settings?.ttsEnabled ?? true;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        child: Column(
+          children: [
+            SwitchListTile(
+              secondary: const Icon(Icons.record_voice_over_rounded),
+              title: const Text('Aviso por voz'),
+              subtitle: const Text(
+                'Fala o veredicto para você não tirar os olhos da rua',
+              ),
+              value: enabled,
+              onChanged: (value) => repo.setTtsEnabled(enabled: value).ignore(),
+            ),
+            if (enabled)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.speed_rounded, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Slider(
+                        value: (settings?.ttsRate ?? 0.55).clamp(0.3, 1),
+                        min: 0.3,
+                        divisions: 7,
+                        label: 'Velocidade da fala',
+                        onChanged: (value) => repo.setTtsRate(value).ignore(),
+                        semanticFormatterCallback: (v) =>
+                            'Velocidade da fala: ${(v * 100).round()}%',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// App de navegação preferido.
+class _NavigationAppTile extends ConsumerWidget {
+  const _NavigationAppTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current =
+        ref.watch(appSettingsProvider).value?.navigationApp ??
+        NavigationApp.waze;
+    final repo = ref.read(appSettingsRepositoryProvider);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.navigation_rounded),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Navegação',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<NavigationApp>(
+                segments: [
+                  for (final app in NavigationApp.values)
+                    ButtonSegment(value: app, label: Text(app.label)),
+                ],
+                selected: {current},
+                onSelectionChanged: (s) =>
+                    repo.setNavigationApp(s.first).ignore(),
+                showSelectedIcon: false,
+              ),
+            ],
           ),
         ),
       ),

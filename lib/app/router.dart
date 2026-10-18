@@ -6,6 +6,8 @@ import 'package:rota_plus/features/expenses/presentation/screens/expenses_screen
 import 'package:rota_plus/features/financial/presentation/screens/cash_screen.dart';
 import 'package:rota_plus/features/goals/presentation/screens/goals_screen.dart';
 import 'package:rota_plus/features/history/presentation/screens/history_screen.dart';
+import 'package:rota_plus/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:rota_plus/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:rota_plus/features/permissions/presentation/screens/permissions_screen.dart';
 import 'package:rota_plus/features/profiles/presentation/screens/profiles_screen.dart';
 import 'package:rota_plus/features/semaphore/presentation/screens/simulator_screen.dart';
@@ -18,6 +20,12 @@ import 'package:rota_plus/features/vehicle/presentation/screens/vehicle_screen.d
 /// Usar o enum em vez de string literal faz o analyzer apontar a rota
 /// inexistente em tempo de compilação.
 enum AppRoute {
+  /// Splash (T01).
+  splash('/splash'),
+
+  /// Apresentação inicial (T02).
+  onboarding('/apresentacao'),
+
   /// Tela principal (T04).
   dashboard('/'),
 
@@ -68,8 +76,18 @@ final _rootKey = GlobalKey<NavigatorState>();
 /// fora das abas — formulário não pertence a uma aba.
 GoRouter buildRouter() => GoRouter(
   navigatorKey: _rootKey,
-  initialLocation: AppRoute.dashboard.path,
+  initialLocation: AppRoute.splash.path,
   routes: <RouteBase>[
+    GoRoute(
+      path: AppRoute.splash.path,
+      name: AppRoute.splash.name,
+      builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: AppRoute.onboarding.path,
+      name: AppRoute.onboarding.name,
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           AppShell(navigationShell: navigationShell),

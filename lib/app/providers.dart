@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rota_plus/core/config/env.dart';
 import 'package:rota_plus/core/services/navigation_launcher.dart';
@@ -17,6 +18,7 @@ import 'package:rota_plus/features/history/data/repositories/ride_history_reposi
 import 'package:rota_plus/features/history/domain/entities/daily_totals.dart';
 import 'package:rota_plus/features/semaphore/domain/entities/ride_evaluation.dart';
 import 'package:rota_plus/features/semaphore/domain/usecases/evaluate_ride.dart';
+import 'package:rota_plus/features/settings/data/repositories/app_settings_repository.dart';
 import 'package:rota_plus/features/vehicle/data/repositories/config_repository.dart';
 import 'package:rota_plus/features/vehicle/domain/entities/cost_parameters.dart';
 import 'package:rota_plus/features/vehicle/domain/entities/work_profile.dart';
@@ -168,6 +170,21 @@ final syncSchedulerProvider = Provider<SyncScheduler>((ref) {
   final scheduler = SyncScheduler(engine: ref.watch(syncEngineProvider));
   ref.onDispose(scheduler.dispose);
   return scheduler;
+});
+
+/// Preferências do aparelho.
+final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
+  return AppSettingsRepository(dao: ref.watch(appDatabaseProvider).settingsDao);
+});
+
+/// Preferências observadas.
+final appSettingsProvider = StreamProvider<AppSettings>((ref) {
+  return ref.watch(appSettingsRepositoryProvider).watch();
+});
+
+/// Tema escolhido pelo motorista.
+final themeModeProvider = Provider<ThemeMode>((ref) {
+  return ref.watch(appSettingsProvider).value?.themeMode ?? ThemeMode.system;
 });
 
 /// Serviço de voz.

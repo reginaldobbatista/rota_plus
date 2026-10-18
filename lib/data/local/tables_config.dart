@@ -168,3 +168,20 @@ class LocalWorkProfiles extends Table {
   @override
   Set<Column<Object>> get primaryKey => {clientId};
 }
+
+/// Preferências do app, como pares chave-valor.
+///
+/// Guarda configuração de **aparelho** — se o onboarding já foi visto, qual
+/// tema o usuário escolheu — e não dado de domínio. Uma tabela genérica evita
+/// uma migração de schema a cada nova preferência.
+@DataClassName('LocalSetting')
+class LocalSettings extends Table {
+  /// Identificador da preferência.
+  TextColumn get key => text()();
+
+  /// Valor serializado como texto.
+  TextColumn get value => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}

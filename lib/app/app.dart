@@ -34,6 +34,7 @@ class _RotaPlusAppState extends ConsumerState<RotaPlusApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: _router,
     );
   }
