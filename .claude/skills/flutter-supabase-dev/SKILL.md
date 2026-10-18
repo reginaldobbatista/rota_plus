@@ -206,6 +206,30 @@ Future<void> add(Expense e) async {
 
 Coluna com conversor se lê com `readWithConverter`, não com `read`.
 
+3. **Nunca use `.watch().first` como leitura pontual.** Cria e destrói uma assinatura a cada chamada e
+   **trava** se o stream já tiver sido escutado: a espera nunca termina e a tela fica carregando sem
+   erro nenhum. Exponha um método com `.get()` no DAO (`getProfiles`, `getVehicles`).
+4. **Para observar várias tabelas juntas**, não combine streams com `.first` dentro de `asyncMap`. Use
+   uma consulta trivial declarando as dependências e busque o conjunto com Futures:
+   ```dart
+   customSelect('SELECT 1', readsFrom: {tabelaA, tabelaB})
+       .watch()
+       .asyncMap((_) => _buscaTudo(id));
+   ```
+
+### Testes com banco: `runAsync` é obrigatório
+
+Dentro de `testWidgets` o relógio é falso. Um `await` direto numa consulta do SQLite **nunca completa** —
+o teste trava em vez de falhar. Toda leitura de banco feita no corpo do teste vai dentro de
+`tester.runAsync(() async { … })`.
+
+Pelo mesmo motivo, `pumpAndSettle` depois de uma ação que mostra `CircularProgressIndicator` espera por
+uma árvore ociosa que não chega. Use um número fixo de `tester.pump(Duration(...))`.
+
+Formulário longo não cabe na viewport padrão de 600×800 e widget fora dela não é construído — o teste
+falharia por não achar o campo, não por defeito real. Defina `tester.view.physicalSize` e restaure com
+`addTearDown(tester.view.reset)`.
+
 ### Alterou o banco?
 
 1. Crie um arquivo novo em `supabase/migrations/` — **nunca edite uma migration já aplicada**.

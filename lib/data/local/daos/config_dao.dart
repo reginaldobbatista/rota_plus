@@ -95,26 +95,17 @@ class ConfigDao extends DatabaseAccessor<AppDatabase> with _$ConfigDaoMixin {
 
   /// Observa um veículo junto de seus custos.
   Stream<VehicleWithCosts?> watchVehicleWithCosts(String vehicleClientId) {
-    final vehicle = (select(
-      localVehicles,
-    )..where((t) => t.clientId.equals(vehicleClientId))).watchSingleOrNull();
-
-    final maintenance = (select(
-      localMaintenanceItems,
-    )..where((t) => t.vehicleClientId.equals(vehicleClientId))).watch();
-
-    final fixed = (select(
-      localFixedCosts,
-    )..where((t) => t.vehicleClientId.equals(vehicleClientId))).watch();
-
-    return vehicle.asyncMap((v) async {
-      if (v == null) return null;
-      return VehicleWithCosts(
-        vehicle: v,
-        maintenance: await maintenance.first,
-        fixedCosts: await fixed.first,
-      );
-    });
+    // Consulta trivial só para declarar `readsFrom`: faz o Drift reemitir
+    // quando qualquer das três tabelas muda. Em seguida busca o conjunto
+    // completo com Futures.
+    //
+    // A versão anterior criava três streams e chamava `.first` neles a cada
+    // emissão. Reescutar um stream já escutado trava a espera para sempre, e
+    // a tela ficava carregando sem erro nenhum — falha silenciosa.
+    return customSelect(
+      'SELECT 1',
+      readsFrom: {localVehicles, localMaintenanceItems, localFixedCosts},
+    ).watch().asyncMap((_) => findVehicleWithCosts(vehicleClientId));
   }
 
   /// Lê um veículo com seus custos, sem observar.
@@ -159,6 +150,29 @@ class ConfigDao extends DatabaseAccessor<AppDatabase> with _$ConfigDaoMixin {
       ..where((t) => t.isActive & t.deletedAt.isNull())
       ..limit(1);
     return query.watchSingleOrNull();
+  }
+
+  /// Lê os perfis uma única vez.
+  ///
+  /// Existe em vez de `watchProfiles().first` porque usar um stream como
+  /// leitura pontual cria e destrói uma assinatura a cada chamada — e já
+  /// causou travamento neste projeto.
+  Future<List<LocalWorkProfile>> getProfiles() {
+    final query = select(localWorkProfiles)
+      ..where((t) => t.deletedAt.isNull())
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.isActive),
+        (t) => OrderingTerm.asc(t.name),
+      ]);
+    return query.get();
+  }
+
+  /// Lê os veículos uma única vez.
+  Future<List<LocalVehicle>> getVehicles() {
+    final query = select(localVehicles)
+      ..where((t) => t.deletedAt.isNull())
+      ..orderBy([(t) => OrderingTerm.asc(t.nickname)]);
+    return query.get();
   }
 
   /// Conta quantos perfis ativos existem, para impor o limite de 10.

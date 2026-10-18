@@ -36,6 +36,10 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (!ref.watch(isConfiguredProvider)) ...[
+                    const _SetupCard(),
+                    const SizedBox(height: 16),
+                  ],
                   const _TodayCard(),
                   const SizedBox(height: 16),
                   _SectionCard(
@@ -125,15 +129,33 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
-                    onPressed: () => context.go(AppRoute.simulator.path),
+                    onPressed: () => context.push(AppRoute.simulator.path),
                     icon: const Icon(Icons.tune_rounded),
                     label: const Text('Abrir simulador'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => context.go(AppRoute.expenses.path),
+                    onPressed: () => context.push(AppRoute.expenses.path),
                     icon: const Icon(Icons.receipt_long_rounded),
                     label: const Text('Registrar despesa'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push(AppRoute.vehicle.path),
+                    icon: const Icon(Icons.directions_car_rounded),
+                    label: const Text('Meu veículo e custos'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push(AppRoute.goals.path),
+                    icon: const Icon(Icons.flag_rounded),
+                    label: const Text('Minhas metas'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push(AppRoute.profiles.path),
+                    icon: const Icon(Icons.layers_rounded),
+                    label: const Text('Perfis de trabalho'),
                   ),
                 ],
               ),
@@ -146,6 +168,58 @@ class DashboardScreen extends ConsumerWidget {
 
   Decimal _minimumFare(Decimal costPerKm) =>
       (costPerKm * Decimal.parse('1.30')).round(scale: 2);
+}
+
+/// Chamada para completar a configuração mínima.
+///
+/// Sem veículo cadastrado o custo por km não existe, e sem ele o semáforo não
+/// tem piso para comparar. Deixar isso implícito faria o motorista achar que o
+/// app está quebrado.
+class _SetupCard extends StatelessWidget {
+  const _SetupCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      color: theme.colorScheme.primary.withValues(alpha: 0.10),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.directions_car_rounded,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Cadastre seu veículo',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sem os custos do seu carro o app não sabe qual corrida dá '
+              'prejuízo. Leva dois minutos e é o que faz o semáforo valer.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => context.push(AppRoute.vehicle.path),
+              child: const Text('Começar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Resumo do dia, lido do banco local.

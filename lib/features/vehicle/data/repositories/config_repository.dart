@@ -126,6 +126,14 @@ class ConfigRepository {
   Stream<List<WorkProfile>> watchProfiles() =>
       _dao.watchProfiles().map((rows) => rows.map(_toProfile).toList());
 
+  /// Lê os perfis uma única vez.
+  Future<List<WorkProfile>> listProfiles() async =>
+      (await _dao.getProfiles()).map(_toProfile).toList();
+
+  /// Lê os veículos uma única vez.
+  Future<List<Vehicle>> listVehicles() async =>
+      (await _dao.getVehicles()).map(_toVehicle).toList();
+
   /// Observa o perfil em uso.
   Stream<WorkProfile?> watchActiveProfile() => _dao.watchActiveProfile().map(
     (row) => row == null ? null : _toProfile(row),
@@ -210,7 +218,7 @@ class ConfigRepository {
 
     // Sem perfil ativo o semáforo fica sem metas: promove o primeiro restante.
     if (profile.isActive) {
-      final remaining = await _dao.watchProfiles().first;
+      final remaining = await _dao.getProfiles();
       if (remaining.isNotEmpty) {
         await _dao.setActiveProfile(remaining.first.clientId, _clock());
       }
