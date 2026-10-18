@@ -1,0 +1,59 @@
+# Configuração do Supabase local (supabase start / db reset).
+#
+# Escrito à mão porque o ambiente de desenvolvimento não tem a CLI instalada.
+# `supabase init` gera uma versão mais completa; se for rodar, confira se os
+# valores abaixo foram preservados antes de commitar.
+
+project_id = "rota-plus"
+
+[api]
+enabled = true
+port = 54321
+# Só o schema public é exposto. `graphql_public` fica de fora: não usamos
+# GraphQL e schema exposto sem uso é superfície de ataque.
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+# Teto de linhas por requisição. Protege contra um `select` sem paginação
+# derrubar o plano e o pacote de dados do motorista.
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Precisa ser 15 ou maior: as views de relatório usam `security_invoker`,
+# que só existe a partir do Postgres 15. Mantenha igual ao projeto hospedado.
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "5MiB"
+
+[auth]
+enabled = true
+site_url = "io.r2b.rotaplus://login-callback"
+# Lista fechada, sem wildcard: um redirect aberto permite roubo de token.
+additional_redirect_urls = ["io.r2b.rotaplus://login-callback"]
+# Token de acesso curto, com rotação do refresh token.
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+double_confirm_changes = true
+
+[analytics]
+enabled = false

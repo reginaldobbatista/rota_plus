@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Uma execução por branch: um push novo cancela o anterior em vez de
+# empilhar builds que ninguém vai ler.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+
+jobs:
+  qualidade:
+    name: Formatação, análise e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Verificar formatação
+        # `--set-exit-if-changed` transforma divergência de formato em falha,
+        # em vez de reformatar silenciosamente.
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Análise estática
+        # Qualquer aviso falha: o projeto trata avisos como trabalho pendente.
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Verificar se o código gerado está atualizado
+        # Os arquivos .g.dart são versionados. Se alguém mudar uma tabela do
+        # Drift sem rodar o build_runner, o repositório fica inconsistente e o
+        # erro só aparece em tempo de compilação, longe da causa.
+        run: |
+          dart run build_runner build
+          if ! git diff --exit-code --stat; then
+            echo "::error::Código gerado desatualizado. Rode 'dart run build_runner build' e commite o resultado."
+            exit 1
+          fi
+
+      - name: Testes
+        run: flutter test --coverage --reporter=github
+
+      - name: Publicar cobertura
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          retention-days: 14
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: qualidade
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Compilar APK de debug
+        # Sem --dart-define: o app precisa compilar e rodar em modo local,
+        # sem backend. Se isso quebrar, a premissa offline-first quebrou.
+        run: flutter build apk --debug
+
+  segredos:
+    name: Varredura de segredos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Histórico completo: um segredo commitado e removido depois
+          # continua no histórico e continua vazado.
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  banco:
+    name: Migrations e segurança do banco
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Subir o Supabase local
+        # Exclui o que não é necessário para validar schema e RLS. Cada
+        # serviço a menos é um container a menos para baixar.
+        run: |
+          supabase start \
+            --exclude studio,imgproxy,inbucket,edge-runtime,logflare,vector
+
+      - name: Aplicar todas as migrations do zero
+        # `db reset` recria o banco e aplica supabase/migrations/ em ordem.
+        # É aqui que um erro de sintaxe ou nome de coluna aparece.
+        run: supabase db reset --debug
+
+      - name: Verificar cobertura de RLS e hardening
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            --set ON_ERROR_STOP=1 \
+            -f supabase/tests/rls_coverage.sql
+
+      - name: Encerrar
+        if: always()
+        run: supabase stop --no-backup
