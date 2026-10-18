@@ -60,7 +60,8 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final evaluation = ref.watch(evaluateRideProvider)(_offer);
+    // Sem perfil cadastrado não há metas, e sem metas não há veredicto.
+    final evaluation = ref.watch(evaluateRideProvider)?.call(_offer);
     final costPerKm = ref.watch(costPerKmProvider);
 
     final card = evaluation == null

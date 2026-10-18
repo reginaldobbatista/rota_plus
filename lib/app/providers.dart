@@ -11,79 +11,82 @@ import 'package:rota_plus/features/history/data/repositories/ride_history_reposi
 import 'package:rota_plus/features/history/domain/entities/daily_totals.dart';
 import 'package:rota_plus/features/semaphore/domain/entities/ride_evaluation.dart';
 import 'package:rota_plus/features/semaphore/domain/usecases/evaluate_ride.dart';
+import 'package:rota_plus/features/vehicle/data/repositories/config_repository.dart';
 import 'package:rota_plus/features/vehicle/domain/entities/cost_parameters.dart';
+import 'package:rota_plus/features/vehicle/domain/entities/work_profile.dart';
 import 'package:rota_plus/features/vehicle/domain/usecases/calculate_cost_per_km.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Parâmetros de custo do veículo ativo.
+/// Perfil de trabalho em uso, lido do banco local.
 ///
-/// Hoje começa com um padrão plausível e vive em memória. Quando a camada
-/// Drift entrar, este notifier passa a ler e escrever no banco local — a
-/// assinatura que a UI consome não muda.
-final class CostParametersNotifier extends Notifier<CostParameters> {
-  @override
-  CostParameters build() => CostParameters(
-    fuelType: FuelType.flex,
-    fuelPrice: Decimal.parse('6.09'),
-    consumption: Decimal.parse('11'),
-    depreciationPerKm: Decimal.parse('0.12'),
-    genericMaintenancePerKm: Decimal.parse('0.08'),
-    workDaysPerMonth: 24,
-    kmPerDay: Decimal.parse('180'),
-    fixedCosts: [
-      FixedCost.annual(label: 'IPVA', amount: Decimal.parse('1200')),
-      FixedCost.annual(label: 'Seguro', amount: Decimal.parse('2800')),
-    ],
-  );
-
-  /// Substitui os parâmetros de custo.
-  void update(CostParameters params) => state = params;
-}
-
-/// Parâmetros de custo do veículo ativo.
-final costParametersProvider =
-    NotifierProvider<CostParametersNotifier, CostParameters>(
-      CostParametersNotifier.new,
-    );
-
-/// Metas do perfil de trabalho ativo.
-final class WorkGoalsNotifier extends Notifier<WorkGoals> {
-  @override
-  WorkGoals build() => WorkGoals(
-    minRsPerKm: Decimal.parse('2.00'),
-    minRsPerHour: Decimal.parse('35.00'),
-    maxPickupKm: Decimal.parse('5'),
-  );
-
-  /// Substitui as metas.
-  void update(WorkGoals goals) => state = goals;
-}
-
-/// Metas do perfil de trabalho ativo.
-final workGoalsProvider = NotifierProvider<WorkGoalsNotifier, WorkGoals>(
-  WorkGoalsNotifier.new,
-);
-
-/// Composição do custo por km do veículo ativo.
-///
-/// Derivado dos parâmetros: recalcula só quando eles mudam. O overlay lê o
-/// valor já pronto, nunca recomputa no caminho crítico.
-final costBreakdownProvider = Provider<CostBreakdown?>((ref) {
-  const useCase = CalculateCostPerKm();
-  return useCase(ref.watch(costParametersProvider));
+/// `null` enquanto o motorista não criou nenhum — é o estado que leva o app ao
+/// onboarding em vez de usar metas inventadas.
+final activeProfileProvider = StreamProvider<WorkProfile?>((ref) {
+  return ref.watch(configRepositoryProvider).watchActiveProfile();
 });
 
-/// Custo por quilômetro do veículo ativo. Zero quando o cadastro está incompleto.
+/// Perfis de trabalho cadastrados.
+final workProfilesProvider = StreamProvider<List<WorkProfile>>((ref) {
+  return ref.watch(configRepositoryProvider).watchProfiles();
+});
+
+/// Veículos cadastrados.
+final vehiclesProvider = StreamProvider<List<Vehicle>>((ref) {
+  return ref.watch(configRepositoryProvider).watchVehicles();
+});
+
+/// Metas do perfil em uso.
+///
+/// Sem perfil cadastrado não há metas: o semáforo fica indisponível em vez de
+/// dar veredicto com critério inventado.
+final workGoalsProvider = Provider<WorkGoals?>((ref) {
+  return ref.watch(activeProfileProvider).value?.goals;
+});
+
+/// Parâmetros de custo do veículo do perfil em uso.
+final costParametersProvider = StreamProvider<CostParameters?>((ref) {
+  final vehicleId = ref.watch(
+    activeProfileProvider.select((p) => p.value?.vehicleClientId),
+  );
+  if (vehicleId == null) return Stream.value(null);
+  return ref.watch(configRepositoryProvider).watchCostParameters(vehicleId);
+});
+
+/// Composição do custo por km do veículo em uso.
+///
+/// Derivado: recalcula só quando veículo ou custos mudam. O overlay lê o valor
+/// já pronto, nunca recomputa no caminho crítico.
+final costBreakdownProvider = Provider<CostBreakdown?>((ref) {
+  final params = ref.watch(costParametersProvider).value;
+  if (params == null) return null;
+  const useCase = CalculateCostPerKm();
+  return useCase(params);
+});
+
+/// Custo por quilômetro do veículo em uso. Zero quando o cadastro está incompleto.
 final costPerKmProvider = Provider<Decimal>((ref) {
   return ref.watch(costBreakdownProvider)?.totalPerKm ?? Decimal.zero;
 });
 
-/// Avaliador de corridas configurado com o custo e as metas ativos.
-final evaluateRideProvider = Provider<EvaluateRide>((ref) {
-  return EvaluateRide(
-    costPerKm: ref.watch(costPerKmProvider),
-    goals: ref.watch(workGoalsProvider),
-  );
+/// Indica se o motorista já concluiu a configuração mínima.
+///
+/// Sem veículo e perfil, o app não tem como avaliar corrida — e mandar o
+/// usuário para o dashboard seria mostrar números sem significado.
+final isConfiguredProvider = Provider<bool>((ref) {
+  final profile = ref.watch(activeProfileProvider).value;
+  return profile != null && profile.vehicleClientId != null;
+});
+
+/// Avaliador de corridas, configurado com o custo e as metas em uso.
+///
+/// `null` enquanto não há perfil cadastrado. Devolver um avaliador com metas
+/// inventadas seria pior do que não avaliar: o motorista confiaria num
+/// veredicto que não reflete o custo dele.
+final evaluateRideProvider = Provider<EvaluateRide?>((ref) {
+  final goals = ref.watch(workGoalsProvider);
+  if (goals == null) return null;
+
+  return EvaluateRide(costPerKm: ref.watch(costPerKmProvider), goals: goals);
 });
 
 // ---------------------------------------------------------------------------
@@ -107,6 +110,12 @@ final rideHistoryRepositoryProvider = Provider<RideHistoryRepository>((ref) {
     rideDao: db.rideDao,
     outboxDao: db.outboxDao,
   );
+});
+
+/// Configuração do motorista: veículos, custos e perfis de trabalho.
+final configRepositoryProvider = Provider<ConfigRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return ConfigRepository(database: db, dao: db.configDao);
 });
 
 /// Despesas do motorista.

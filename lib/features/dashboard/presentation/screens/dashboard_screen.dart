@@ -83,32 +83,34 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                   ),
                   const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Metas do perfil ativo',
-                    subtitle:
-                        'Tolerância de ${Fmt.percent(goals.thinkTolerancePercent)} '
-                        'para o estado PENSE.',
-                    child: MetricGrid(
-                      cells: [
-                        MetricCell(
-                          label: r'Meta R$/km',
-                          value: Fmt.perKm(goals.minRsPerKm),
-                        ),
-                        MetricCell(
-                          label: r'Meta R$/hora',
-                          value: Fmt.perHour(goals.minRsPerHour),
-                        ),
-                        MetricCell(
-                          label: 'Nota mínima',
-                          value: Fmt.rating(goals.minPassengerRating),
-                        ),
-                        MetricCell(
-                          label: 'Embarque máx.',
-                          value: Fmt.km(goals.maxPickupKm),
-                        ),
-                      ],
+                  if (goals != null)
+                    _SectionCard(
+                      title: 'Metas do perfil ativo',
+                      subtitle:
+                          'Tolerância de '
+                          '${Fmt.percent(goals.thinkTolerancePercent)} '
+                          'para o estado PENSE.',
+                      child: MetricGrid(
+                        cells: [
+                          MetricCell(
+                            label: r'Meta R$/km',
+                            value: Fmt.perKm(goals.minRsPerKm),
+                          ),
+                          MetricCell(
+                            label: r'Meta R$/hora',
+                            value: Fmt.perHour(goals.minRsPerHour),
+                          ),
+                          MetricCell(
+                            label: 'Nota mínima',
+                            value: Fmt.rating(goals.minPassengerRating),
+                          ),
+                          MetricCell(
+                            label: 'Embarque máx.',
+                            value: Fmt.km(goals.maxPickupKm),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
                   if (breakdown != null)
                     _SectionCard(

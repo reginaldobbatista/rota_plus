@@ -6,13 +6,16 @@ import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:rota_plus/data/local/converters/decimal_converter.dart';
+import 'package:rota_plus/data/local/daos/config_dao.dart';
 import 'package:rota_plus/data/local/daos/expense_dao.dart';
 import 'package:rota_plus/data/local/daos/outbox_dao.dart';
 import 'package:rota_plus/data/local/daos/ride_dao.dart';
 import 'package:rota_plus/data/local/tables.dart';
+import 'package:rota_plus/data/local/tables_config.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
 import 'package:rota_plus/features/semaphore/domain/entities/ride_evaluation.dart';
 import 'package:rota_plus/features/semaphore/domain/entities/ride_offer.dart';
+import 'package:rota_plus/features/vehicle/domain/entities/cost_parameters.dart';
 
 part 'database.g.dart';
 
@@ -28,8 +31,12 @@ part 'database.g.dart';
     LocalExpenses,
     LocalWorkSessions,
     OutboxEntries,
+    LocalVehicles,
+    LocalMaintenanceItems,
+    LocalFixedCosts,
+    LocalWorkProfiles,
   ],
-  daos: [RideDao, ExpenseDao, OutboxDao],
+  daos: [RideDao, ExpenseDao, OutboxDao, ConfigDao],
 )
 class AppDatabase extends _$AppDatabase {
   /// Abre o banco no armazenamento do app.
@@ -39,7 +46,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// Guarda `DateTime` como texto ISO-8601 em UTC.
   ///
@@ -54,8 +61,18 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      // v2: veículo, custos e perfis de trabalho deixam de viver em memória.
+      if (from < 2) {
+        await m.createTable(localVehicles);
+        await m.createTable(localMaintenanceItems);
+        await m.createTable(localFixedCosts);
+        await m.createTable(localWorkProfiles);
+      }
+    },
     beforeOpen: (details) async {
-      // Chave estrangeira não é ativada por padrão no SQLite.
+      // Chave estrangeira não é ativada por padrão no SQLite. Precisa vir
+      // antes de qualquer migration que crie tabela com `references`.
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
