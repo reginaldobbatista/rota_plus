@@ -57,6 +57,12 @@ class SettingsScreen extends ConsumerWidget {
 
                 const _SectionTitle('Operação'),
                 _Tile(
+                  icon: Icons.insights_rounded,
+                  title: 'Estatísticas',
+                  subtitle: 'Melhores horários e comparativo de plataformas',
+                  onTap: () => context.push(AppRoute.statistics.path),
+                ),
+                _Tile(
                   icon: Icons.tune_rounded,
                   title: 'Simulador do semáforo',
                   subtitle: 'Calibrar metas e registrar corrida manualmente',
@@ -67,6 +73,14 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Despesas',
                   subtitle: 'Combustível, alimentação, pedágio e outros',
                   onTap: () => context.push(AppRoute.expenses.path),
+                ),
+
+                const _SectionTitle('Sistema'),
+                _Tile(
+                  icon: Icons.verified_user_rounded,
+                  title: 'Permissões',
+                  subtitle: 'O que o app precisa e por quê',
+                  onTap: () => context.push(AppRoute.permissions.path),
                 ),
 
                 const _SectionTitle('Sincronização'),

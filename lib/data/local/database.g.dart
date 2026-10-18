@@ -5249,6 +5249,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final OutboxDao outboxDao = OutboxDao(this as AppDatabase);
   late final ConfigDao configDao = ConfigDao(this as AppDatabase);
   late final ReportDao reportDao = ReportDao(this as AppDatabase);
+  late final SessionDao sessionDao = SessionDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

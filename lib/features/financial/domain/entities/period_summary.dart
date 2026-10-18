@@ -53,6 +53,7 @@ final class PeriodSummary {
     required this.extraExpenses,
     required this.kmDriven,
     required this.minutesDriven,
+    this.minutesWorked = 0,
   });
 
   /// Apuração vazia.
@@ -86,9 +87,14 @@ final class PeriodSummary {
 
   /// Minutos comprometidos com as corridas aceitas.
   ///
-  /// Não é a jornada do motorista: é o tempo dentro das corridas. A jornada
-  /// real depende das sessões de trabalho.
+  /// Não é a jornada do motorista: é o tempo dentro das corridas.
   final double minutesDriven;
+
+  /// Minutos de expediente registrados no período.
+  ///
+  /// Esta é a jornada real, incluindo o tempo parado esperando chamada — que é
+  /// justamente o que separa um R$/hora honesto de um otimista.
+  final double minutesWorked;
 
   /// Lucro líquido: bruto menos custo operacional menos despesas.
   Decimal get netProfit => grossRevenue - operatingCost - extraExpenses;
@@ -96,18 +102,36 @@ final class PeriodSummary {
   /// Horas comprometidas com corridas.
   double get hoursDriven => minutesDriven / 60;
 
+  /// Horas de expediente.
+  double get hoursWorked => minutesWorked / 60;
+
+  /// Indica se há expediente registrado no período.
+  bool get hasWorkSessions => minutesWorked > 0;
+
   /// Receita por hora em corrida. Nula sem tempo registrado.
-  Decimal? get revenuePerHour {
-    if (hoursDriven <= 0) return null;
-    return (grossRevenue / Decimal.parse(hoursDriven.toString()))
-        .toDecimal(scaleOnInfinitePrecision: 2)
-        .round(scale: 2);
-  }
+  Decimal? get revenuePerHour => _perHour(grossRevenue, hoursDriven);
 
   /// Lucro por hora em corrida. Nulo sem tempo registrado.
-  Decimal? get profitPerHour {
-    if (hoursDriven <= 0) return null;
-    return (netProfit / Decimal.parse(hoursDriven.toString()))
+  Decimal? get profitPerHour => _perHour(netProfit, hoursDriven);
+
+  /// Receita por hora de expediente. Nula sem expediente registrado.
+  Decimal? get revenuePerWorkedHour => _perHour(grossRevenue, hoursWorked);
+
+  /// Lucro por hora de expediente. Nulo sem expediente registrado.
+  Decimal? get profitPerWorkedHour => _perHour(netProfit, hoursWorked);
+
+  /// Proporção do expediente efetivamente dentro de corridas, de 0 a 1.
+  ///
+  /// Mostra quanto do tempo o motorista passou parado. É o indicador que
+  /// explica por que o R$/hora de expediente é sempre menor que o de corrida.
+  double? get occupancyRate {
+    if (minutesWorked <= 0) return null;
+    return (minutesDriven / minutesWorked).clamp(0.0, 1.0);
+  }
+
+  static Decimal? _perHour(Decimal value, double hours) {
+    if (hours <= 0) return null;
+    return (value / Decimal.parse(hours.toString()))
         .toDecimal(scaleOnInfinitePrecision: 2)
         .round(scale: 2);
   }

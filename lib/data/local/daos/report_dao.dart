@@ -6,14 +6,21 @@ part 'report_dao.g.dart';
 
 /// Linhas brutas de um período, prontas para agregação.
 class PeriodRows {
-  /// Agrupa corridas e despesas do período.
-  const PeriodRows({required this.rides, required this.expenses});
+  /// Agrupa o que alimenta os relatórios do período.
+  const PeriodRows({
+    required this.rides,
+    required this.expenses,
+    required this.sessions,
+  });
 
   /// Corridas avaliadas no período.
   final List<LocalRide> rides;
 
   /// Despesas lançadas no período.
   final List<LocalExpense> expenses;
+
+  /// Sessões de trabalho que tocam o período.
+  final List<LocalWorkSession> sessions;
 }
 
 /// Leitura das linhas que alimentam os relatórios.
@@ -29,20 +36,20 @@ class PeriodRows {
 /// O custo é irrelevante: o banco é local e um mês tem ordem de milhares de
 /// linhas. A regra de "agregar no servidor" do descritivo existe para evitar
 /// baixar dados pela rede, o que não se aplica aqui.
-@DriftAccessor(tables: [LocalRideEvaluations, LocalExpenses])
+@DriftAccessor(tables: [LocalRideEvaluations, LocalExpenses, LocalWorkSessions])
 class ReportDao extends DatabaseAccessor<AppDatabase> with _$ReportDaoMixin {
   /// Cria o DAO.
   ReportDao(super.db);
 
-  /// Observa as linhas de um período, reemitindo quando qualquer das duas
-  /// tabelas muda.
+  /// Observa as linhas de um período, reemitindo quando qualquer das tabelas
+  /// envolvidas muda.
   Stream<PeriodRows> watchPeriod({
     required DateTime from,
     required DateTime to,
   }) {
     return customSelect(
       'SELECT 1',
-      readsFrom: {localRideEvaluations, localExpenses},
+      readsFrom: {localRideEvaluations, localExpenses, localWorkSessions},
     ).watch().asyncMap((_) => fetchPeriod(from: from, to: to));
   }
 
@@ -65,6 +72,16 @@ class ReportDao extends DatabaseAccessor<AppDatabase> with _$ReportDaoMixin {
               ..where((t) => t.occurredAt.isSmallerThanValue(to)))
             .get();
 
-    return PeriodRows(rides: rides, expenses: expenses);
+    // Inclui a sessão ainda aberta e a que atravessa a borda do período: uma
+    // madrugada iniciada antes da meia-noite tem horas nos dois dias.
+    final sessions =
+        await (select(localWorkSessions)
+              ..where((t) => t.startedAt.isSmallerThanValue(to))
+              ..where(
+                (t) => t.endedAt.isNull() | t.endedAt.isBiggerThanValue(from),
+              ))
+            .get();
+
+    return PeriodRows(rides: rides, expenses: expenses, sessions: sessions);
   }
 }

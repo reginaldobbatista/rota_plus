@@ -6,9 +6,11 @@ import 'package:rota_plus/features/expenses/presentation/screens/expenses_screen
 import 'package:rota_plus/features/financial/presentation/screens/cash_screen.dart';
 import 'package:rota_plus/features/goals/presentation/screens/goals_screen.dart';
 import 'package:rota_plus/features/history/presentation/screens/history_screen.dart';
+import 'package:rota_plus/features/permissions/presentation/screens/permissions_screen.dart';
 import 'package:rota_plus/features/profiles/presentation/screens/profiles_screen.dart';
 import 'package:rota_plus/features/semaphore/presentation/screens/simulator_screen.dart';
 import 'package:rota_plus/features/settings/presentation/screens/settings_screen.dart';
+import 'package:rota_plus/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:rota_plus/features/vehicle/presentation/screens/vehicle_screen.dart';
 
 /// Rotas nomeadas do app.
@@ -41,7 +43,13 @@ enum AppRoute {
   goals('/metas'),
 
   /// Perfis de trabalho (T08).
-  profiles('/perfis');
+  profiles('/perfis'),
+
+  /// Estatísticas de desempenho (T12).
+  statistics('/estatisticas'),
+
+  /// Permissões e configuração técnica (T15).
+  permissions('/permissoes');
 
   const AppRoute(this.path);
 
@@ -103,6 +111,18 @@ GoRouter buildRouter() => GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootKey,
+      path: AppRoute.statistics.path,
+      name: AppRoute.statistics.name,
+      builder: (context, state) => const StatisticsScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootKey,
+      path: AppRoute.permissions.path,
+      name: AppRoute.permissions.name,
+      builder: (context, state) => const PermissionsScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootKey,

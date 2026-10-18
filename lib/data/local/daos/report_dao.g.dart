@@ -7,6 +7,8 @@ mixin _$ReportDaoMixin on DatabaseAccessor<AppDatabase> {
   $LocalRideEvaluationsTable get localRideEvaluations =>
       attachedDatabase.localRideEvaluations;
   $LocalExpensesTable get localExpenses => attachedDatabase.localExpenses;
+  $LocalWorkSessionsTable get localWorkSessions =>
+      attachedDatabase.localWorkSessions;
   ReportDaoManager get managers => ReportDaoManager(this);
 }
 
@@ -20,4 +22,9 @@ class ReportDaoManager {
       );
   $$LocalExpensesTableTableManager get localExpenses =>
       $$LocalExpensesTableTableManager(_db.attachedDatabase, _db.localExpenses);
+  $$LocalWorkSessionsTableTableManager get localWorkSessions =>
+      $$LocalWorkSessionsTableTableManager(
+        _db.attachedDatabase,
+        _db.localWorkSessions,
+      );
 }

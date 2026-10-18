@@ -40,6 +40,8 @@ class DashboardScreen extends ConsumerWidget {
                     const _SetupCard(),
                     const SizedBox(height: 16),
                   ],
+                  const _WorkSessionCard(),
+                  const SizedBox(height: 16),
                   const _TodayCard(),
                   const SizedBox(height: 16),
                   _SectionCard(
@@ -150,6 +152,76 @@ class DashboardScreen extends ConsumerWidget {
 
   Decimal _minimumFare(Decimal costPerKm) =>
       (costPerKm * Decimal.parse('1.30')).round(scale: 2);
+}
+
+/// Controle de expediente.
+///
+/// Sem ele o app só sabe o tempo dentro das corridas, e o R$/hora sai
+/// otimista: ignora justamente as horas paradas esperando chamada, que é onde
+/// a conta do motorista costuma não fechar.
+class _WorkSessionCard extends ConsumerWidget {
+  const _WorkSessionCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final session = ref.watch(openWorkSessionProvider).value;
+    final repo = ref.read(workSessionRepositoryProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(
+              session == null
+                  ? Icons.play_circle_outline_rounded
+                  : Icons.timer_rounded,
+              color: session == null
+                  ? theme.colorScheme.onSurfaceVariant
+                  : theme.colorScheme.primary,
+              size: 32,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    session == null ? 'Fora do expediente' : 'Em expediente',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    session == null
+                        ? 'Inicie para contar suas horas de verdade.'
+                        : 'Desde ${_formatTime(session.startedAt)}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            session == null
+                ? FilledButton(
+                    onPressed: repo.start,
+                    child: const Text('Iniciar'),
+                  )
+                : OutlinedButton(
+                    onPressed: repo.stop,
+                    child: const Text('Encerrar'),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime value) {
+    final local = value.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
 }
 
 /// Chamada para completar a configuração mínima.

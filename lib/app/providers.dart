@@ -1,12 +1,16 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rota_plus/core/config/env.dart';
+import 'package:rota_plus/core/services/navigation_launcher.dart';
+import 'package:rota_plus/core/services/tts_service.dart';
 import 'package:rota_plus/core/sync/sync_engine.dart';
+import 'package:rota_plus/core/sync/sync_scheduler.dart';
 import 'package:rota_plus/data/local/database.dart';
 import 'package:rota_plus/data/remote/supabase_sync_client.dart';
 import 'package:rota_plus/features/expenses/data/repositories/expense_repository.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
 import 'package:rota_plus/features/financial/data/repositories/financial_repository.dart';
+import 'package:rota_plus/features/financial/data/repositories/work_session_repository.dart';
 import 'package:rota_plus/features/financial/domain/entities/period_summary.dart';
 import 'package:rota_plus/features/goals/domain/entities/work_goals.dart';
 import 'package:rota_plus/features/history/data/repositories/ride_history_repository.dart';
@@ -153,6 +157,44 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     client: ref.watch(remoteSyncClientProvider),
     isOnline: () => ref.read(isOnlineProvider),
   );
+});
+
+/// Agendador que decide quando o outbox é drenado.
+///
+/// Precisa ser mantido vivo por alguém — `RotaPlusApp` o inicia no `initState`.
+/// Sem isso o `SyncEngine` existiria sem nunca ser chamado, e a fila só
+/// cresceria.
+final syncSchedulerProvider = Provider<SyncScheduler>((ref) {
+  final scheduler = SyncScheduler(engine: ref.watch(syncEngineProvider));
+  ref.onDispose(scheduler.dispose);
+  return scheduler;
+});
+
+/// Serviço de voz.
+final ttsServiceProvider = Provider<TtsService>((ref) {
+  final service = TtsService();
+  ref.onDispose(service.stop);
+  return service;
+});
+
+/// Abertura de rota no Waze ou Google Maps.
+final navigationLauncherProvider = Provider<NavigationLauncher>(
+  (ref) => const NavigationLauncher(),
+);
+
+/// Registro de expediente.
+final workSessionRepositoryProvider = Provider<WorkSessionRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return WorkSessionRepository(
+    database: db,
+    sessionDao: db.sessionDao,
+    outboxDao: db.outboxDao,
+  );
+});
+
+/// Expediente aberto, se houver.
+final openWorkSessionProvider = StreamProvider<WorkSession?>((ref) {
+  return ref.watch(workSessionRepositoryProvider).watchOpen();
 });
 
 /// Quantidade de registros aguardando sincronização.

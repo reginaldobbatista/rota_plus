@@ -11,6 +11,7 @@ import 'package:rota_plus/data/local/daos/expense_dao.dart';
 import 'package:rota_plus/data/local/daos/outbox_dao.dart';
 import 'package:rota_plus/data/local/daos/report_dao.dart';
 import 'package:rota_plus/data/local/daos/ride_dao.dart';
+import 'package:rota_plus/data/local/daos/session_dao.dart';
 import 'package:rota_plus/data/local/tables.dart';
 import 'package:rota_plus/data/local/tables_config.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
@@ -37,7 +38,7 @@ part 'database.g.dart';
     LocalFixedCosts,
     LocalWorkProfiles,
   ],
-  daos: [RideDao, ExpenseDao, OutboxDao, ConfigDao, ReportDao],
+  daos: [RideDao, ExpenseDao, OutboxDao, ConfigDao, ReportDao, SessionDao],
 )
 class AppDatabase extends _$AppDatabase {
   /// Abre o banco no armazenamento do app.

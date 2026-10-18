@@ -3,6 +3,7 @@ import 'package:rota_plus/core/money/decimal_x.dart';
 import 'package:rota_plus/data/local/daos/report_dao.dart';
 import 'package:rota_plus/data/local/database.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
+import 'package:rota_plus/features/financial/data/repositories/work_session_repository.dart';
 import 'package:rota_plus/features/financial/domain/entities/period_summary.dart';
 import 'package:rota_plus/features/semaphore/domain/entities/ride_evaluation.dart';
 import 'package:rota_plus/features/semaphore/domain/entities/ride_offer.dart';
@@ -60,20 +61,43 @@ class FinancialRepository {
   Stream<CashReport> watchReport({
     required DateTime from,
     required DateTime to,
-  }) => _dao.watchPeriod(from: from, to: to).map(_build);
+  }) => _dao
+      .watchPeriod(from: from, to: to)
+      .map((rows) => _build(rows, from: from, to: to));
 
   /// Lê o relatório de um período uma única vez.
   Future<CashReport> fetchReport({
     required DateTime from,
     required DateTime to,
-  }) async => _build(await _dao.fetchPeriod(from: from, to: to));
+  }) async => _build(
+    await _dao.fetchPeriod(from: from, to: to),
+    from: from,
+    to: to,
+  );
 
-  CashReport _build(PeriodRows rows) {
+  CashReport _build(
+    PeriodRows rows, {
+    required DateTime from,
+    required DateTime to,
+  }) {
     final accepted = rows.rides
         .where((r) => r.outcome == RideOutcome.accepted)
         .toList();
 
+    final now = DateTime.now().toUtc();
+    final minutesWorked = rows.sessions.fold<double>(
+      0,
+      (total, row) =>
+          total +
+          WorkSession(
+            clientId: row.clientId,
+            startedAt: row.startedAt,
+            endedAt: row.endedAt,
+          ).minutesWithin(from: from, to: to, now: now),
+    );
+
     final summary = PeriodSummary(
+      minutesWorked: minutesWorked,
       ridesEvaluated: rows.rides.length,
       ridesAccepted: accepted.length,
       grossRevenue: _sum(accepted.map((r) => r.fare)),

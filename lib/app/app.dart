@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rota_plus/app/providers.dart';
 import 'package:rota_plus/app/router.dart';
 import 'package:rota_plus/app/theme/app_theme.dart';
 
@@ -17,6 +18,14 @@ class _RotaPlusAppState extends ConsumerState<RotaPlusApp> {
   // Criado uma única vez: recriar o router a cada build descartaria a pilha
   // de navegação.
   late final GoRouter _router = buildRouter();
+
+  @override
+  void initState() {
+    super.initState();
+    // O agendador precisa de alguém que o mantenha vivo. Sem esta linha o
+    // SyncEngine existe mas nunca é chamado, e a fila só cresce.
+    ref.read(syncSchedulerProvider).start();
+  }
 
   @override
   Widget build(BuildContext context) {

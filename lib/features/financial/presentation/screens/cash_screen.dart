@@ -69,6 +69,14 @@ class _Report extends StatelessWidget {
 
   final CashReport report;
 
+  /// Formata um valor opcional, mostrando travessão quando não há base.
+  static String _money(Decimal? value) =>
+      value == null ? '—' : Fmt.money(value);
+
+  /// Formata uma proporção de 0 a 1 como percentual.
+  static String _percent(double? ratio) =>
+      ratio == null ? '—' : '${(ratio * 100).round()}%';
+
   @override
   Widget build(BuildContext context) {
     final s = report.summary;
@@ -94,34 +102,71 @@ class _Report extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _Card(
-          title: 'Por hora em corrida',
-          subtitle:
-              'Considera só o tempo dentro das corridas. A jornada completa '
-              'depende do registro de expediente, que ainda não existe.',
+          title: s.hasWorkSessions
+              ? 'Por hora de expediente'
+              : 'Por hora em corrida',
+          subtitle: s.hasWorkSessions
+              ? 'Inclui o tempo parado esperando chamada. É o número que '
+                    'mostra quanto a hora realmente rendeu.'
+              : 'Considera só o tempo dentro das corridas. Registre o '
+                    'expediente para ver a hora real.',
           child: MetricGrid(
             cells: [
               MetricCell(
                 label: 'Receita/h',
-                value: s.revenuePerHour == null
-                    ? '—'
-                    : Fmt.perHour(s.revenuePerHour!),
+                value: _money(
+                  s.hasWorkSessions ? s.revenuePerWorkedHour : s.revenuePerHour,
+                ),
               ),
               MetricCell(
                 label: 'Lucro/h',
-                value: s.profitPerHour == null
-                    ? '—'
-                    : Fmt.perHour(s.profitPerHour!),
+                value: _money(
+                  s.hasWorkSessions ? s.profitPerWorkedHour : s.profitPerHour,
+                ),
               ),
               MetricCell(
-                label: 'Aceitação',
-                value: s.acceptanceRate == null
-                    ? '—'
-                    : '${(s.acceptanceRate! * 100).round()}%',
+                label: s.hasWorkSessions ? 'Em corrida' : 'Aceitação',
+                value: s.hasWorkSessions
+                    ? _percent(s.occupancyRate)
+                    : _percent(s.acceptanceRate),
               ),
               MetricCell(label: 'Despesas', value: Fmt.money(s.extraExpenses)),
             ],
           ),
         ),
+        if (s.hasWorkSessions) ...[
+          const SizedBox(height: 16),
+          _Card(
+            title: 'Jornada',
+            subtitle:
+                'O tempo parado é o que separa o R\$/hora otimista do real.',
+            child: MetricGrid(
+              cells: [
+                MetricCell(
+                  label: 'Expediente',
+                  value: Fmt.minutes(s.minutesWorked),
+                ),
+                MetricCell(
+                  label: 'Em corrida',
+                  value: Fmt.minutes(s.minutesDriven),
+                ),
+                MetricCell(
+                  label: 'Parado',
+                  value: Fmt.minutes(
+                    (s.minutesWorked - s.minutesDriven).clamp(
+                      0,
+                      s.minutesWorked,
+                    ),
+                  ),
+                ),
+                MetricCell(
+                  label: 'Aceitação',
+                  value: _percent(s.acceptanceRate),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (report.dailySeries.length > 1) ...[
           const SizedBox(height: 16),
           _Card(

@@ -58,6 +58,22 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
     );
   }
 
+  /// Fala o veredicto, como o overlay fará quando existir.
+  ///
+  /// Aqui serve para o motorista conferir volume e velocidade antes de
+  /// depender disso dirigindo.
+  Future<void> _announce(RideEvaluation evaluation) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(ttsServiceProvider).announce(evaluation);
+    } on Object {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('A voz não está disponível no aparelho.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Sem perfil cadastrado não há metas, e sem metas não há veredicto.
@@ -73,6 +89,7 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
               const SizedBox(height: 12),
               _RecordActions(
                 onRecord: (outcome) => _record(evaluation, outcome),
+                onAnnounce: () => _announce(evaluation),
               ),
             ],
           );
@@ -166,28 +183,39 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
 /// Registrar o desfecho é o que gera o dado mais valioso do produto: a
 /// comparação entre o que o app recomendou e o que o motorista fez.
 class _RecordActions extends StatelessWidget {
-  const _RecordActions({required this.onRecord});
+  const _RecordActions({required this.onRecord, required this.onAnnounce});
 
   final void Function(RideOutcome outcome) onRecord;
+  final VoidCallback onAnnounce;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => onRecord(RideOutcome.accepted),
-            icon: const Icon(Icons.check_rounded),
-            label: const Text('Aceitei'),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => onRecord(RideOutcome.accepted),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Aceitei'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => onRecord(RideOutcome.rejected),
+                icon: const Icon(Icons.close_rounded),
+                label: const Text('Recusei'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => onRecord(RideOutcome.rejected),
-            icon: const Icon(Icons.close_rounded),
-            label: const Text('Recusei'),
-          ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: onAnnounce,
+          icon: const Icon(Icons.volume_up_rounded),
+          label: const Text('Ouvir o aviso'),
         ),
       ],
     );
