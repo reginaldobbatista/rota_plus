@@ -1,0 +1,6 @@
+{
+  "SUPABASE_URL": "https://SEU-PROJETO.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_xxxxxxxxxxxxxxxxxxxxxx",
+  "SENTRY_DSN": "",
+  "REVENUECAT_PUBLIC_KEY": ""
+}

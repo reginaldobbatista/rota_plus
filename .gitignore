@@ -54,10 +54,14 @@ app.*.map.json
 # Segredos — nada aqui pode ir para o repositório
 # ---------------------------------------------------------------------------
 
-# Arquivos de --dart-define-from-file (SUPABASE_ANON_KEY, SENTRY_DSN, etc.)
-env/
+# Arquivos de --dart-define-from-file (chaves do Supabase, DSN do Sentry).
+# Ignora o conteúdo real mas mantém o modelo versionado. Ignorar a pasta
+# inteira (`env/`) não funcionaria: o git não entra em diretório ignorado
+# para aplicar a exceção.
+env/*
+!env/example.json
+!env/README.md
 *.env
-!.env.example
 
 # Assinatura de release do Android
 /android/key.properties

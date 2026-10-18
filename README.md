@@ -67,10 +67,11 @@ tentado. É o que permite trabalhar na feature principal antes de o backend exis
 Com backend:
 
 ```bash
-flutter run \
-  --dart-define=SUPABASE_URL=https://<projeto>.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=<chave-publicavel>
+cp env/example.json env/dev.json   # preencha com os dados do seu projeto
+flutter run --dart-define-from-file=env/dev.json
 ```
+
+Instruções de cada chave em [env/README.md](env/README.md).
 
 > ⚠️ **Nunca** passe `SUPABASE_SERVICE_ROLE_KEY`, chave secreta do Stripe ou do RevenueCat por
 > `--dart-define`. Tudo que é compilado no app pode ser extraído do APK. Privilégio de servidor vive em
