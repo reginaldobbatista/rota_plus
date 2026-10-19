@@ -37,6 +37,19 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Retorno do login social. O esquema precisa bater exatamente
+                 com o `redirectTo` do Dart e com a lista de Redirect URLs do
+                 painel do Supabase; divergir faz o navegador abrir e o app
+                 nunca receber a sessão. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="io.r2b.rotaplus"
+                    android:host="login-callback"/>
+            </intent-filter>
         </activity>
         <!-- Captura das ofertas. `exported="false"`: só o sistema aciona. -->
         <service

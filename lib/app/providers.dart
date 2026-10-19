@@ -10,6 +10,7 @@ import 'package:rota_plus/core/sync/sync_engine.dart';
 import 'package:rota_plus/core/sync/sync_scheduler.dart';
 import 'package:rota_plus/data/local/database.dart';
 import 'package:rota_plus/data/remote/supabase_sync_client.dart';
+import 'package:rota_plus/features/auth/data/repositories/auth_repository.dart';
 import 'package:rota_plus/features/expenses/data/repositories/expense_repository.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
 import 'package:rota_plus/features/financial/data/repositories/financial_repository.dart';
@@ -173,6 +174,23 @@ final syncSchedulerProvider = Provider<SyncScheduler>((ref) {
   final scheduler = SyncScheduler(engine: ref.watch(syncEngineProvider));
   ref.onDispose(scheduler.dispose);
   return scheduler;
+});
+
+/// Conta do motorista.
+///
+/// Opcional por decisão de produto: o app funciona inteiro sem ela.
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(),
+);
+
+/// Usuário autenticado, ou `null` em modo local.
+final currentUserProvider = StreamProvider<User?>((ref) {
+  return ref.watch(authRepositoryProvider).watchUser();
+});
+
+/// Indica se há sessão ativa.
+final isSignedInProvider = Provider<bool>((ref) {
+  return ref.watch(currentUserProvider).value != null;
 });
 
 /// Preferências do aparelho.

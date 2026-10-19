@@ -32,6 +32,9 @@ class SettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
+                const _SectionTitle('Conta'),
+                const _AccountTile(),
+
                 const _SectionTitle('Configuração'),
                 _Tile(
                   icon: Icons.directions_car_rounded,
@@ -104,6 +107,71 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Estado da conta e entrada/saída.
+class _AccountTile extends ConsumerWidget {
+  const _AccountTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider).value;
+
+    if (user == null) {
+      return _Tile(
+        icon: Icons.person_outline_rounded,
+        title: 'Usando sem conta',
+        subtitle: Env.hasSupabase
+            ? 'Entre para não perder seus dados ao trocar de celular'
+            : 'Esta versão foi compilada sem a conta na nuvem',
+        onTap: Env.hasSupabase ? () => context.push(AppRoute.login.path) : null,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        child: ListTile(
+          leading: const Icon(Icons.person_rounded),
+          title: Text(user.email ?? 'Conta conectada'),
+          subtitle: const Text('Seus dados sobem automaticamente'),
+          trailing: TextButton(
+            onPressed: () => _confirmSignOut(context, ref),
+            child: const Text('Sair'),
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(authRepositoryProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sair da conta?'),
+        content: const Text(
+          'Seu histórico continua neste aparelho. O que ainda não tiver '
+          'subido fica guardado até você entrar de novo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed ?? false) await repo.signOut();
   }
 }
 

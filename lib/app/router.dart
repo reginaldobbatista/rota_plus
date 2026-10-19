@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rota_plus/app/shell.dart';
+import 'package:rota_plus/features/auth/presentation/screens/login_screen.dart';
 import 'package:rota_plus/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:rota_plus/features/expenses/presentation/screens/expenses_screen.dart';
 import 'package:rota_plus/features/financial/presentation/screens/cash_screen.dart';
@@ -57,7 +58,10 @@ enum AppRoute {
   statistics('/estatisticas'),
 
   /// Permissões e configuração técnica (T15).
-  permissions('/permissoes');
+  permissions('/permissoes'),
+
+  /// Entrar ou criar conta (T03).
+  login('/entrar');
 
   const AppRoute(this.path);
 
@@ -141,6 +145,12 @@ GoRouter buildRouter() => GoRouter(
       path: AppRoute.permissions.path,
       name: AppRoute.permissions.name,
       builder: (context, state) => const PermissionsScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootKey,
+      path: AppRoute.login.path,
+      name: AppRoute.login.name,
+      builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootKey,
