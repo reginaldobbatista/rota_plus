@@ -80,3 +80,7 @@ supabase/.temp/
 
 # Preferências locais do Claude Code (podem conter caminhos e permissões)
 .claude/settings.local.json
+
+# Capturas de referência: material de trabalho, não código. 123 JPEGs que
+# engordariam o repositório sem serem usados em build nem em teste.
+docs/imagens/
