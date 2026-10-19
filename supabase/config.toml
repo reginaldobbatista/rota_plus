@@ -52,7 +52,15 @@ enable_signup = true
 
 [auth.email]
 enable_signup = true
+
+# ⚠️ BLOQUEADOR DE GO-LIVE: precisa voltar para `true` antes de ter usuário
+# real. Com `false`, qualquer pessoa cria conta com um e-mail que não é dela,
+# e a recuperação de senha vira um caminho de invasão.
+#
+# Está desligado só para não exigir abrir e-mail a cada teste enquanto o app
+# está em desenvolvimento.
 enable_confirmations = false
+
 double_confirm_changes = true
 
 [analytics]
