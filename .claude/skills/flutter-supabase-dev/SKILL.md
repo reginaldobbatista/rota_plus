@@ -254,6 +254,13 @@ falharia por não achar o campo, não por defeito real. Defina `tester.view.phys
 3. Policy usa `(select auth.uid())`, não `auth.uid()` — o primeiro é avaliado uma vez por query, o
    segundo uma vez por linha.
 4. Função `security definer` declara `set search_path = ''` e qualifica nomes.
+4b. **Toda função nova nasce sem `EXECUTE`.** O Postgres concede a `PUBLIC` por padrão
+   e o PostgREST expõe o schema `public` — ou seja, cada função vira um endpoint
+   `/rest/v1/rpc/<nome>`. A migration `0009` revogou tudo e reconcedeu só as seis RPCs
+   que o app chama. Se criar uma função nova e ela precisar ser chamável, conceda
+   explicitamente **e** acrescente à lista em `supabase/tests/rls_coverage.sql`.
+   Isso não é teoria: na primeira aplicação das migrations, `fn_purge_deleted_accounts`
+   e `fn_prune_free_tier_history` ficaram chamáveis **sem autenticação**.
 5. View de relatório: `with (security_invoker = true)`, senão ela ignora a RLS das tabelas base.
 6. Escreva o teste pgTAP de isolamento antes de considerar pronto.
 

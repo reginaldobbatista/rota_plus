@@ -116,6 +116,40 @@ begin
   end if;
 end $$;
 
+\echo '== 5b. Função interna não pode ser chamável pela API =='
+-- No Postgres, CREATE FUNCTION concede EXECUTE a PUBLIC por padrão, e o
+-- PostgREST expõe o schema public — ou seja, toda função vira um endpoint
+-- `/rest/v1/rpc/<nome>`. Na primeira aplicação das migrations isso deixou
+-- `fn_purge_deleted_accounts` e `fn_prune_free_tier_history` acessíveis sem
+-- autenticação: um curl anônimo apagaria dados de todos os motoristas.
+do $$
+declare
+  offenders text;
+begin
+  select string_agg(p.proname, ', ' order by p.proname)
+    into offenders
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.prokind = 'f'
+     and p.proname not in (
+       -- Única lista de funções que o app pode chamar. Acrescentar algo aqui
+       -- é decidir expor um endpoint novo.
+       'rpc_sync_rides', 'rpc_sync_expenses', 'rpc_sync_work_sessions',
+       'rpc_consume_ride_quota', 'rpc_request_account_deletion',
+       'fn_calculate_cost_per_km'
+     )
+     and (
+       has_function_privilege('anon', p.oid, 'EXECUTE')
+       or has_function_privilege('authenticated', p.oid, 'EXECUTE')
+     );
+
+  if offenders is not null then
+    raise exception
+      'Funções internas expostas na API REST: %', offenders;
+  end if;
+end $$;
+
 \echo '== 6. Views de relatório precisam de security_invoker =='
 -- Sem isso a view roda com privilégio do dono e ignora a RLS das tabelas
 -- base: a tabela fica protegida e a view que a lê, não.
