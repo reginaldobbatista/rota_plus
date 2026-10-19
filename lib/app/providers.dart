@@ -158,6 +158,7 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     outboxDao: db.outboxDao,
     rideDao: db.rideDao,
     expenseDao: db.expenseDao,
+    sessionDao: db.sessionDao,
     client: ref.watch(remoteSyncClientProvider),
     isOnline: () => ref.read(isOnlineProvider),
   );

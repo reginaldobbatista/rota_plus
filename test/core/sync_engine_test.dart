@@ -6,6 +6,7 @@ import 'package:rota_plus/data/local/database.dart';
 import 'package:rota_plus/data/local/tables.dart';
 import 'package:rota_plus/features/expenses/data/repositories/expense_repository.dart';
 import 'package:rota_plus/features/expenses/domain/entities/expense.dart';
+import 'package:rota_plus/features/financial/data/repositories/work_session_repository.dart';
 import 'package:rota_plus/features/history/data/repositories/ride_history_repository.dart';
 
 import '../support/fixtures.dart';
@@ -26,6 +27,9 @@ class FakeSyncClient implements RemoteSyncClient {
   /// Chamadas de despesa, uma entrada por requisição.
   final List<List<Map<String, Object?>>> expenseCalls = [];
 
+  /// Chamadas de sessão de trabalho.
+  final List<List<Map<String, Object?>>> sessionCalls = [];
+
   @override
   Future<void> pushRides(List<Map<String, Object?>> payload) async {
     calls.add(payload);
@@ -38,6 +42,11 @@ class FakeSyncClient implements RemoteSyncClient {
     expenseCalls.add(payload);
     final failure = failExpensesWith;
     if (failure != null) throw failure;
+  }
+
+  @override
+  Future<void> pushWorkSessions(List<Map<String, Object?>> payload) async {
+    sessionCalls.add(payload);
   }
 }
 
@@ -64,6 +73,7 @@ void main() {
     outboxDao: db.outboxDao,
     rideDao: db.rideDao,
     expenseDao: db.expenseDao,
+    sessionDao: db.sessionDao,
     client: client,
     isOnline: () => online,
     batchSize: batchSize,
@@ -289,6 +299,72 @@ void main() {
       expect(result.sent, 2);
       expect(client.calls, hasLength(1));
       expect(client.expenseCalls, hasLength(1));
+      expect(await db.outboxDao.nextBatch(), isEmpty);
+    });
+  });
+
+  group('SyncEngine · sessões de trabalho', () {
+    test('drena a fila de expediente', () async {
+      // Antes desta fila existir, as sessões eram enfileiradas e nunca
+      // enviadas: o outbox crescia para sempre no aparelho.
+      final sessions = WorkSessionRepository(
+        database: db,
+        sessionDao: db.sessionDao,
+        outboxDao: db.outboxDao,
+      );
+      await sessions.start();
+      final client = FakeSyncClient();
+
+      final result = await engineWith(client: client).flush();
+
+      expect(result.sent, 1);
+      expect(client.sessionCalls, hasLength(1));
+      expect(await db.outboxDao.nextBatch(), isEmpty);
+    });
+
+    test('sessão aberta sobe com ended_at nulo', () async {
+      // Esperar o encerramento perderia a sessão inteira se o aparelho fosse
+      // trocado no meio do expediente.
+      final sessions = WorkSessionRepository(
+        database: db,
+        sessionDao: db.sessionDao,
+        outboxDao: db.outboxDao,
+      );
+      await sessions.start();
+      final client = FakeSyncClient();
+
+      await engineWith(client: client).flush();
+      final payload = client.sessionCalls.single.single;
+
+      expect(payload['client_id'], isNotNull);
+      expect(payload['started_at'], isNotNull);
+      expect(payload['ended_at'], isNull);
+    });
+
+    test('as três filas drenam na mesma rodada', () async {
+      final sessions = WorkSessionRepository(
+        database: db,
+        sessionDao: db.sessionDao,
+        outboxDao: db.outboxDao,
+      );
+      final expenses = ExpenseRepository(
+        database: db,
+        expenseDao: db.expenseDao,
+        outboxDao: db.outboxDao,
+      );
+
+      await repo.record(testEvaluation());
+      await expenses.add(
+        category: ExpenseCategory.fuel,
+        amount: d('150.00'),
+        occurredAt: DateTime.utc(2026, 10, 17, 10),
+      );
+      await sessions.start();
+      final client = FakeSyncClient();
+
+      final result = await engineWith(client: client).flush();
+
+      expect(result.sent, 3);
       expect(await db.outboxDao.nextBatch(), isEmpty);
     });
   });

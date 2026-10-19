@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:rota_plus/data/local/daos/expense_dao.dart';
 import 'package:rota_plus/data/local/daos/outbox_dao.dart';
 import 'package:rota_plus/data/local/daos/ride_dao.dart';
+import 'package:rota_plus/data/local/daos/session_dao.dart';
 import 'package:rota_plus/data/local/mappers/expense_mapper.dart';
 import 'package:rota_plus/data/local/mappers/ride_mapper.dart';
 import 'package:rota_plus/data/local/tables.dart';
@@ -18,6 +19,9 @@ abstract interface class RemoteSyncClient {
 
   /// Sobe despesas. Deve resolver conflito por `updated_at`.
   Future<void> pushExpenses(List<Map<String, Object?>> payload);
+
+  /// Sobe sessões de trabalho. Deve ser idempotente por `client_id`.
+  Future<void> pushWorkSessions(List<Map<String, Object?>> payload);
 }
 
 /// Resultado de uma rodada de sincronização.
@@ -78,12 +82,14 @@ class SyncEngine {
     required OutboxDao outboxDao,
     required RideDao rideDao,
     required ExpenseDao expenseDao,
+    required SessionDao sessionDao,
     required bool Function() isOnline,
     RemoteSyncClient? client,
     int batchSize = 100,
   }) : _outbox = outboxDao,
        _rides = rideDao,
        _expenses = expenseDao,
+       _sessions = sessionDao,
        _isOnline = isOnline,
        _client = client,
        _batchSize = batchSize;
@@ -91,6 +97,7 @@ class SyncEngine {
   final OutboxDao _outbox;
   final RideDao _rides;
   final ExpenseDao _expenses;
+  final SessionDao _sessions;
   final bool Function() _isOnline;
   final RemoteSyncClient? _client;
   final int _batchSize;
@@ -123,7 +130,12 @@ class SyncEngine {
         loadPayloads: _expensePayloads,
         push: client.pushExpenses,
       );
-      return rides.merge(expenses);
+      final sessions = await _flushKind(
+        kind: OutboxKind.workSessionUpsert,
+        loadPayloads: _sessionPayloads,
+        push: client.pushWorkSessions,
+      );
+      return rides.merge(expenses).merge(sessions);
     } finally {
       _running = false;
     }
@@ -189,6 +201,13 @@ class SyncEngine {
     List<String> clientIds,
   ) async {
     final rows = await _expenses.findManyByClientId(clientIds);
+    return {for (final row in rows) row.clientId: row.toSyncPayload()};
+  }
+
+  Future<Map<String, Map<String, Object?>>> _sessionPayloads(
+    List<String> clientIds,
+  ) async {
+    final rows = await _sessions.findManyByClientId(clientIds);
     return {for (final row in rows) row.clientId: row.toSyncPayload()};
   }
 }

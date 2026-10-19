@@ -49,6 +49,12 @@ class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
     return query.get();
   }
 
+  /// Lê várias sessões de uma vez, para montar o lote de sincronização.
+  Future<List<LocalWorkSession>> findManyByClientId(List<String> clientIds) =>
+      (select(
+        localWorkSessions,
+      )..where((t) => t.clientId.isIn(clientIds))).get();
+
   /// Encerra uma sessão.
   Future<void> closeSession(String clientId, DateTime endedAt) =>
       (update(localWorkSessions)..where((t) => t.clientId.equals(clientId)))

@@ -67,3 +67,17 @@ String _categoryToSql(ExpenseCategory category) => switch (category) {
   ExpenseCategory.rent => 'rent',
   ExpenseCategory.other => 'other',
 };
+
+/// Conversão da sessão de trabalho para o payload de sincronização.
+extension WorkSessionRowToSync on LocalWorkSession {
+  /// Monta o payload para `rpc_sync_work_sessions`.
+  ///
+  /// Sessão aberta sobe com `ended_at` nulo e é completada no envio seguinte:
+  /// esperar o encerramento para enviar perderia a sessão inteira se o app
+  /// fosse desinstalado ou o aparelho trocado no meio do expediente.
+  Map<String, Object?> toSyncPayload() => <String, Object?>{
+    'client_id': clientId,
+    'started_at': startedAt.toUtc().toIso8601String(),
+    'ended_at': endedAt?.toUtc().toIso8601String(),
+  };
+}

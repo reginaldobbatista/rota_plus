@@ -23,6 +23,10 @@ class SupabaseSyncClient implements RemoteSyncClient {
   Future<void> pushExpenses(List<Map<String, Object?>> payload) =>
       _pushInSlices('rpc_sync_expenses', 'p_expenses', payload);
 
+  @override
+  Future<void> pushWorkSessions(List<Map<String, Object?>> payload) =>
+      _pushInSlices('rpc_sync_work_sessions', 'p_sessions', payload);
+
   Future<void> _pushInSlices(
     String function,
     String param,
